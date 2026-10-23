@@ -24,14 +24,21 @@ app.get('/api/users', async (req, res) => {
   res.json(data);
 });
 
-// 3. GET: Items (Stock) အားလုံးကို ယူရန်
+// 3. GET: Inventory (Frontend က /api/inventory လို့ ခေါ်နေလို့ ထည့်ပေးခြင်း)
+app.get('/api/inventory', async (req, res) => {
+  const { data, error } = await supabase.from('items').select('*');
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+// 4. GET: Items (Stock) အားလုံးကို ယူရန်
 app.get('/api/items', async (req, res) => {
   const { data, error } = await supabase.from('items').select('*');
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 
-// 4. POST: Item အသစ်ထည့်ရန် (Add Stock)
+// 5. POST: Item အသစ်ထည့်ရန် (Add Stock)
 app.post('/api/items', async (req, res) => {
   const newItem = req.body;
   const { data, error } = await supabase.from('items').insert([newItem]);
@@ -39,14 +46,14 @@ app.post('/api/items', async (req, res) => {
   res.json({ message: 'Item added successfully', data });
 });
 
-// 5. GET: Orders အားလုံးကို ယူရန်
+// 6. GET: Orders အားလုံးကို ယူရန်
 app.get('/api/orders', async (req, res) => {
   const { data, error } = await supabase.from('orders').select('*');
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 
-// 6. POST: Order အသစ်ထည့်ရန် (New Order)
+// 7. POST: Order အသစ်ထည့်ရန် (New Order)
 app.post('/api/orders', async (req, res) => {
   const newOrder = req.body;
   const { data, error } = await supabase.from('orders').insert([newOrder]);
