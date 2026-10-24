@@ -24,20 +24,54 @@ app.get('/api/users', async (req, res) => {
   res.json(data);
 });
 
-// 3. GET: Inventory / Items
+// 3. GET: Inventory / Items (snake_case မှ camelCase သို့ Map လုပ်ခြင်း)
 app.get('/api/inventory', async (req, res) => {
   const { data, error } = await supabase.from('items').select('*');
   if (error) return res.status(400).json({ error: error.message });
-  res.json(data);
+
+  const formattedItems = (data || []).map(item => ({
+    id: item.id,
+    vendorId: item.vendor_id,
+    name: item.name,
+    category: item.category,
+    price: Number(item.price) || 0,
+    cost: Number(item.cost) || 0,
+    quantity: Number(item.quantity) || 0,
+    damagedQty: Number(item.damaged_qty) || 0,
+    stockInDate: item.stock_in_date,
+    sku: item.sku,
+    handlingFee: Number(item.handling_fee) || 0,
+    storeChargePerDay: Number(item.store_charge_per_day) || 0,
+    freeDays: Number(item.free_days) || 0
+  }));
+
+  res.json(formattedItems);
 });
 
 app.get('/api/items', async (req, res) => {
   const { data, error } = await supabase.from('items').select('*');
   if (error) return res.status(400).json({ error: error.message });
-  res.json(data);
+
+  const formattedItems = (data || []).map(item => ({
+    id: item.id,
+    vendorId: item.vendor_id,
+    name: item.name,
+    category: item.category,
+    price: Number(item.price) || 0,
+    cost: Number(item.cost) || 0,
+    quantity: Number(item.quantity) || 0,
+    damagedQty: Number(item.damaged_qty) || 0,
+    stockInDate: item.stock_in_date,
+    sku: item.sku,
+    handlingFee: Number(item.handling_fee) || 0,
+    storeChargePerDay: Number(item.store_charge_per_day) || 0,
+    freeDays: Number(item.free_days) || 0
+  }));
+
+  res.json(formattedItems);
 });
 
-// 5. POST: Item အသစ်ထည့်ရန် (camelCase ကို snake_case သို့ Map လုပ်ခြင်း)
+// 5. POST: Item အသစ်ထည့်ရန်
 app.post('/api/items', async (req, res) => {
   const item = req.body;
   const dbItem = {
@@ -61,14 +95,37 @@ app.post('/api/items', async (req, res) => {
   res.json({ message: 'Item added successfully', data });
 });
 
-// 6. GET: Orders
+// 6. GET: Orders (snake_case မှ camelCase သို့ Map လုပ်ခြင်း)
 app.get('/api/orders', async (req, res) => {
   const { data, error } = await supabase.from('orders').select('*');
   if (error) return res.status(400).json({ error: error.message });
-  res.json(data);
+
+  const formattedOrders = (data || []).map(order => ({
+    id: order.id,
+    vendorId: order.vendor_id,
+    customerName: order.customer_name,
+    customerPhone: order.customer_phone,
+    deliveryAddress: order.delivery_address,
+    deliveryService: order.delivery_service,
+    trackingNo: order.tracking_no,
+    status: order.status,
+    cancelled: order.cancelled,
+    items: order.items || [],
+    itemTotal: Number(order.item_total) || 0,
+    deliveryFee: Number(order.delivery_fee) || 0,
+    totalCod: Number(order.total_cod) || 0,
+    tnHandlingFee: Number(order.tn_handling_fee) || 0,
+    tnStoreFee: Number(order.tn_store_fee) || 0,
+    codCollected: order.cod_collected,
+    settlementStatus: order.settlement_status,
+    createdAt: order.created_at,
+    updatedBy: order.updated_by
+  }));
+
+  res.json(formattedOrders);
 });
 
-// 7. POST: Order အသစ်ထည့်ရန် (camelCase ကို snake_case သို့ Map လုပ်ခြင်း)
+// 7. POST: Order အသစ်ထည့်ရန်
 app.post('/api/orders', async (req, res) => {
   const order = req.body;
   const dbOrder = {
