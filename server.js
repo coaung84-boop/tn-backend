@@ -7,24 +7,20 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Supabase Connection ချိတ်ဆက်ခြင်း
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// 1. Test Route
 app.get('/', (req, res) => {
   res.send('T&N Fulfillment Backend API is running successfully!');
 });
 
-// 2. GET: Users
 app.get('/api/users', async (req, res) => {
   const { data, error } = await supabase.from('users').select('*');
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 
-// 3. GET: Inventory / Items (snake_case မှ camelCase သို့ Map လုပ်ခြင်း)
 app.get('/api/inventory', async (req, res) => {
   const { data, error } = await supabase.from('items').select('*');
   if (error) return res.status(400).json({ error: error.message });
@@ -71,7 +67,6 @@ app.get('/api/items', async (req, res) => {
   res.json(formattedItems);
 });
 
-// 5. POST: Item အသစ်ထည့်ရန်
 app.post('/api/items', async (req, res) => {
   const item = req.body;
   const dbItem = {
@@ -95,7 +90,6 @@ app.post('/api/items', async (req, res) => {
   res.json({ message: 'Item added successfully', data });
 });
 
-// 6. GET: Orders (snake_case မှ camelCase သို့ Map လုပ်ခြင်း)
 app.get('/api/orders', async (req, res) => {
   const { data, error } = await supabase.from('orders').select('*');
   if (error) return res.status(400).json({ error: error.message });
@@ -125,7 +119,6 @@ app.get('/api/orders', async (req, res) => {
   res.json(formattedOrders);
 });
 
-// 7. POST: Order အသစ်ထည့်ရန်
 app.post('/api/orders', async (req, res) => {
   const order = req.body;
   const dbOrder = {
@@ -153,6 +146,27 @@ app.post('/api/orders', async (req, res) => {
   const { data, error } = await supabase.from('orders').insert([dbOrder]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ message: 'Order created successfully', data });
+});
+
+// PUT: Order Status သို့မဟုတ် အချက်အလက် Update လုပ်ရန်
+app.put('/api/orders/:id', async (req, res) => {
+  const orderId = req.params.id;
+  const order = req.body;
+  const dbOrder = {
+    status: order.status,
+    tracking_no: order.trackingNo,
+    cancelled: order.cancelled,
+    cod_collected: order.codCollected,
+    updated_by: order.updatedBy
+  };
+
+  const { data, error } = await supabase
+    .from('orders')
+    .update(dbOrder)
+    .eq('id', orderId);
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: 'Order updated successfully', data });
 });
 
 const PORT = process.env.PORT || 5000;
