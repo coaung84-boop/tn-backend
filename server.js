@@ -75,7 +75,7 @@ app.post('/api/items', async (req, res) => {
     name: item.name,
     category: item.category,
     price: item.price,
-    cost: 0, // Capital Cost removed
+    cost: 0, // Capital cost removed for fulfillment side
     quantity: item.quantity,
     damaged_qty: item.damagedQty || 0,
     stock_in_date: item.stockInDate,
@@ -168,7 +168,7 @@ app.put('/api/orders/:id', async (req, res) => {
   res.json({ message: 'Order updated successfully', data });
 });
 
-// GET: Returns
+// GET: Returns API for refresh update support
 app.get('/api/returns', async (req, res) => {
   const { data, error } = await supabase.from('returns').select('*');
   if (error) return res.status(400).json({ error: error.message });
@@ -189,7 +189,7 @@ app.get('/api/returns', async (req, res) => {
   res.json(formattedReturns);
 });
 
-// POST: Return
+// POST: Return API
 app.post('/api/returns', async (req, res) => {
   const ret = req.body;
   const dbRet = {
