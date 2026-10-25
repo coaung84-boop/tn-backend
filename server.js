@@ -21,6 +21,41 @@ app.get('/api/users', async (req, res) => {
   res.json(data);
 });
 
+// Vendors API (New addition to fix persistence issue)
+app.get('/api/vendors', async (req, res) => {
+  const { data, error } = await supabase.from('vendors').select('*');
+  if (error) return res.status(400).json({ error: error.message });
+
+  const formattedVendors = (data || []).map(v => ({
+    id: v.id,
+    name: v.name,
+    phone: v.phone,
+    address: v.address,
+    bankAccount: v.bank_account,
+    freeStorageDays: Number(v.free_storage_days) || 7,
+    dailyStoreFee: Number(v.daily_store_fee) || 200
+  }));
+
+  res.json(formattedVendors);
+});
+
+app.post('/api/vendors', async (req, res) => {
+  const v = req.body;
+  const dbVendor = {
+    id: v.id,
+    name: v.name,
+    phone: v.phone,
+    address: v.address,
+    bank_account: v.bankAccount,
+    free_storage_days: v.freeStorageDays,
+    daily_store_fee: v.dailyStoreFee
+  };
+
+  const { data, error } = await supabase.from('vendors').insert([dbVendor]);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: 'Vendor added successfully', data });
+});
+
 app.get('/api/inventory', async (req, res) => {
   const { data, error } = await supabase.from('items').select('*');
   if (error) return res.status(400).json({ error: error.message });
@@ -90,7 +125,6 @@ app.post('/api/items', async (req, res) => {
   res.json({ message: 'Item added successfully', data });
 });
 
-// PUT: Update item (e.g. quantity after order or return)
 app.put('/api/items/:id', async (req, res) => {
   const itemId = req.params.id;
   const item = req.body;
@@ -186,7 +220,6 @@ app.put('/api/orders/:id', async (req, res) => {
   res.json({ message: 'Order updated successfully', data });
 });
 
-// GET: Returns
 app.get('/api/returns', async (req, res) => {
   const { data, error } = await supabase.from('returns').select('*');
   if (error) return res.status(400).json({ error: error.message });
@@ -207,7 +240,6 @@ app.get('/api/returns', async (req, res) => {
   res.json(formattedReturns);
 });
 
-// POST: Return
 app.post('/api/returns', async (req, res) => {
   const ret = req.body;
   const dbRet = {
