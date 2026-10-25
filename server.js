@@ -21,7 +21,6 @@ app.get('/api/users', async (req, res) => {
   res.json(data);
 });
 
-// GET: Inventory Items
 app.get('/api/inventory', async (req, res) => {
   const { data, error } = await supabase.from('items').select('*');
   if (error) return res.status(400).json({ error: error.message });
@@ -68,7 +67,6 @@ app.get('/api/items', async (req, res) => {
   res.json(formattedItems);
 });
 
-// POST: Add Item / Restock
 app.post('/api/items', async (req, res) => {
   const item = req.body;
   const dbItem = {
@@ -77,7 +75,7 @@ app.post('/api/items', async (req, res) => {
     name: item.name,
     category: item.category,
     price: item.price,
-    cost: item.cost || 0,
+    cost: 0, // Capital Cost removed
     quantity: item.quantity,
     damaged_qty: item.damagedQty || 0,
     stock_in_date: item.stockInDate,
@@ -92,21 +90,6 @@ app.post('/api/items', async (req, res) => {
   res.json({ message: 'Item added successfully', data });
 });
 
-// PUT: Update Item Quantity (Restock)
-app.put('/api/items/:id', async (req, res) => {
-  const itemId = req.params.id;
-  const { quantity } = req.body;
-
-  const { data, error } = await supabase
-    .from('items')
-    .update({ quantity: quantity })
-    .eq('id', itemId);
-
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'Item quantity updated successfully', data });
-});
-
-// GET: Orders
 app.get('/api/orders', async (req, res) => {
   const { data, error } = await supabase.from('orders').select('*');
   if (error) return res.status(400).json({ error: error.message });
@@ -206,13 +189,13 @@ app.get('/api/returns', async (req, res) => {
   res.json(formattedReturns);
 });
 
-// POST: Returns
+// POST: Return
 app.post('/api/returns', async (req, res) => {
   const ret = req.body;
-  const dbReturn = {
+  const dbRet = {
     id: ret.id,
-    order_id: ret.orderId || 'N/A',
-    item_id: ret.itemId || 'N/A',
+    order_id: ret.orderId || '',
+    item_id: ret.itemId || '',
     vendor_id: ret.vendorId,
     item_name: ret.itemName,
     qty: ret.qty,
@@ -222,7 +205,7 @@ app.post('/api/returns', async (req, res) => {
     date: ret.date
   };
 
-  const { data, error } = await supabase.from('returns').insert([dbReturn]);
+  const { data, error } = await supabase.from('returns').insert([dbRet]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ message: 'Return recorded successfully', data });
 });
