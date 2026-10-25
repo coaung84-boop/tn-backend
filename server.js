@@ -15,52 +15,36 @@ app.get('/', (req, res) => {
   res.send('T&N Fulfillment Backend API is running successfully!');
 });
 
-// Users
 app.get('/api/users', async (req, res) => {
   const { data, error } = await supabase.from('users').select('*');
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 
-// Vendors
-app.get('/api/vendors', async (req, res) => {
-  const { data, error } = await supabase.from('vendors').select('*');
-  if (error) {
-    // Fallback if table not created yet
-    return res.json([]);
-  }
-  const formattedVendors = (data || []).map(v => ({
-    id: v.id,
-    name: v.name,
-    phone: v.phone,
-    address: v.address,
-    bankAccount: v.bank_account || v.bankAccount,
-    handlingFee: Number(v.handling_fee) || 500,
-    freeStorageDays: Number(v.free_storage_days) || 7,
-    dailyStoreFee: Number(v.daily_store_fee) || 200
-  }));
-  res.json(formattedVendors);
-});
-
-app.post('/api/vendors', async (req, res) => {
-  const v = req.body;
-  const dbVendor = {
-    id: v.id,
-    name: v.name,
-    phone: v.phone,
-    address: v.address,
-    bank_account: v.bankAccount,
-    handling_fee: v.handlingFee || 500,
-    free_storage_days: v.freeStorageDays || 7,
-    daily_store_fee: v.dailyStoreFee || 200
-  };
-  const { data, error } = await supabase.from('vendors').insert([dbVendor]);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'Vendor added successfully', data });
-});
-
-// Inventory / Items
 app.get('/api/inventory', async (req, res) => {
+  const { data, error } = await supabase.from('items').select('*');
+  if (error) return res.status(400).json({ error: error.message });
+
+  const formattedItems = (data || []).map(item => ({
+    id: item.id,
+    vendorId: item.vendor_id,
+    name: item.name,
+    category: item.category,
+    price: Number(item.price) || 0,
+    cost: Number(item.cost) || 0,
+    quantity: Number(item.quantity) || 0,
+    damagedQty: Number(item.damaged_qty) || 0,
+    stockInDate: item.stock_in_date,
+    sku: item.sku,
+    handlingFee: Number(item.handling_fee) || 0,
+    storeChargePerDay: Number(item.store_charge_per_day) || 0,
+    freeDays: Number(item.free_days) || 0
+  }));
+
+  res.json(formattedItems);
+});
+
+app.get('/api/items', async (req, res) => {
   const { data, error } = await supabase.from('items').select('*');
   if (error) return res.status(400).json({ error: error.message });
 
@@ -106,7 +90,6 @@ app.post('/api/items', async (req, res) => {
   res.json({ message: 'Item added successfully', data });
 });
 
-// Orders
 app.get('/api/orders', async (req, res) => {
   const { data, error } = await supabase.from('orders').select('*');
   if (error) return res.status(400).json({ error: error.message });
@@ -183,44 +166,6 @@ app.put('/api/orders/:id', async (req, res) => {
 
   if (error) return res.status(400).json({ error: error.message });
   res.json({ message: 'Order updated successfully', data });
-});
-
-// Returns
-app.get('/api/returns', async (req, res) => {
-  const { data, error } = await supabase.from('returns').select('*');
-  if (error) return res.json([]);
-  const formattedReturns = (data || []).map(r => ({
-    id: r.id,
-    orderId: r.order_id,
-    itemId: r.item_id,
-    vendorId: r.vendor_id,
-    itemName: r.item_name,
-    qty: Number(r.qty) || 0,
-    type: r.type,
-    reason: r.reason,
-    status: r.status,
-    date: r.date
-  }));
-  res.json(formattedReturns);
-});
-
-app.post('/api/returns', async (req, res) => {
-  const r = req.body;
-  const dbReturn = {
-    id: r.id,
-    order_id: r.orderId || '',
-    item_id: r.itemId || '',
-    vendor_id: r.vendorId,
-    item_name: r.itemName,
-    qty: r.qty,
-    type: r.type,
-    reason: r.reason,
-    status: r.status,
-    date: r.date
-  };
-  const { data, error } = await supabase.from('returns').insert([dbReturn]);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'Return recorded successfully', data });
 });
 
 const PORT = process.env.PORT || 5000;
