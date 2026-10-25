@@ -75,7 +75,7 @@ app.post('/api/items', async (req, res) => {
     name: item.name,
     category: item.category,
     price: item.price,
-    cost: 0, // Capital cost removed for fulfillment side
+    cost: 0,
     quantity: item.quantity,
     damaged_qty: item.damagedQty || 0,
     stock_in_date: item.stockInDate,
@@ -88,6 +88,24 @@ app.post('/api/items', async (req, res) => {
   const { data, error } = await supabase.from('items').insert([dbItem]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ message: 'Item added successfully', data });
+});
+
+// PUT: Update item (e.g. quantity after order or return)
+app.put('/api/items/:id', async (req, res) => {
+  const itemId = req.params.id;
+  const item = req.body;
+  const dbItem = {};
+  if (item.quantity !== undefined) dbItem.quantity = item.quantity;
+  if (item.price !== undefined) dbItem.price = item.price;
+  if (item.name !== undefined) dbItem.name = item.name;
+
+  const { data, error } = await supabase
+    .from('items')
+    .update(dbItem)
+    .eq('id', itemId);
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: 'Item updated successfully', data });
 });
 
 app.get('/api/orders', async (req, res) => {
@@ -168,7 +186,7 @@ app.put('/api/orders/:id', async (req, res) => {
   res.json({ message: 'Order updated successfully', data });
 });
 
-// GET: Returns API for refresh update support
+// GET: Returns
 app.get('/api/returns', async (req, res) => {
   const { data, error } = await supabase.from('returns').select('*');
   if (error) return res.status(400).json({ error: error.message });
@@ -189,7 +207,7 @@ app.get('/api/returns', async (req, res) => {
   res.json(formattedReturns);
 });
 
-// POST: Return API
+// POST: Return
 app.post('/api/returns', async (req, res) => {
   const ret = req.body;
   const dbRet = {
