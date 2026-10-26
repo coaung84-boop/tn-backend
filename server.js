@@ -56,6 +56,59 @@ app.post('/api/vendors', async (req, res) => {
   res.json({ message: 'Vendor added successfully', data });
 });
 
+// Deliveries API (Newly Added)
+app.get('/api/deliveries', async (req, res) => {
+  const { data, error } = await supabase.from('deliveries').select('*');
+  if (error) return res.status(400).json({ error: error.message });
+
+  const formattedDeliveries = (data || []).map(d => ({
+    id: d.id,
+    name: d.name,
+    phone: d.phone,
+    address: d.address,
+    bankAccount: d.bank_account
+  }));
+
+  res.json(formattedDeliveries);
+});
+
+app.post('/api/deliveries', async (req, res) => {
+  const d = req.body;
+  const dbDelivery = {
+    id: d.id,
+    name: d.name,
+    phone: d.phone,
+    address: d.address,
+    bank_account: d.bankAccount
+  };
+
+  const { data, error } = await supabase.from('deliveries').insert([dbDelivery]);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: 'Delivery added successfully', data });
+});
+
+app.put('/api/deliveries/:id', async (req, res) => {
+  const delId = req.params.id;
+  const d = req.body;
+  const dbDelivery = {
+    name: d.name,
+    phone: d.phone,
+    address: d.address,
+    bank_account: d.bankAccount
+  };
+
+  const { data, error } = await supabase.from('deliveries').update(dbDelivery).eq('id', delId);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: 'Delivery updated successfully', data });
+});
+
+app.delete('/api/deliveries/:id', async (req, res) => {
+  const delId = req.params.id;
+  const { data, error } = await supabase.from('deliveries').delete().eq('id', delId);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: 'Delivery deleted successfully', data });
+});
+
 app.get('/api/inventory', async (req, res) => {
   const { data, error } = await supabase.from('items').select('*');
   if (error) return res.status(400).json({ error: error.message });
@@ -211,7 +264,6 @@ app.put('/api/orders/:id', async (req, res) => {
     updated_by: order.updatedBy
   };
 
-  // Partial Return သို့မဟုတ် အခြား အပြောင်းအอ်များအတွက် ထည့်သွင်းခြင်း
   if (order.items !== undefined) dbOrder.items = order.items;
   if (order.itemTotal !== undefined) dbOrder.item_total = order.itemTotal;
   if (order.totalCod !== undefined) dbOrder.total_cod = order.totalCod;
@@ -223,6 +275,14 @@ app.put('/api/orders/:id', async (req, res) => {
 
   if (error) return res.status(400).json({ error: error.message });
   res.json({ message: 'Order updated successfully', data });
+});
+
+// Delete Order API (Newly Added for Cancelled Vouchers)
+app.delete('/api/orders/:id', async (req, res) => {
+  const orderId = req.params.id;
+  const { data, error } = await supabase.from('orders').delete().eq('id', orderId);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: 'Order deleted successfully', data });
 });
 
 app.get('/api/returns', async (req, res) => {
