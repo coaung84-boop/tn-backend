@@ -1,227 +1,185 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
-const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+// In-memory initial data stores matching App.tsx
+let usersList = [
+  { id: 'USR-001', username: "admin", password: "admin123", name: "System Admin", role: "Admin", vendorId: "" },
+  { id: 'USR-002', username: "staff", password: "staff123", name: "Operations Staff", role: "Staff", vendorId: "" },
+  { id: 'USR-003', username: "vendor_a", password: "vendor123", name: "Aung Cosmetic Shop", role: "Vendor", vendorId: "VND-101" },
+  { id: 'USR-004', username: "vendor_b", password: "vendor123", name: "Trendy Fashion Hub", role: "Vendor", vendorId: "VND-102" },
+];
 
-app.get('/', (req, res) => {
-  res.send('T&N Fulfillment Backend API with Cash Management is running!');
+let vendors = [
+  { id: 'VND-101', name: 'Aung Cosmetic Shop', phone: '09250001122', address: 'Kamayut, Yangon', bankAccount: 'KBZ Pay: 09250001122 (U Aung)', freeStorageDays: 7, dailyStoreFee: 200 },
+  { id: 'VND-102', name: 'Trendy Fashion Hub', phone: '09450003344', address: 'Mandalay', bankAccount: 'AYA Bank: 00123456789 (Daw Mya)', freeStorageDays: 5, dailyStoreFee: 300 },
+];
+
+let deliveries = [
+  { id: 'DEL-101', name: 'Royal Express', phone: '095000111', address: 'Yangon Main Hub', bankAccount: 'KBZPay: 095000111 (Royal)' },
+  { id: 'DEL-102', name: 'Ninja Van', phone: '096000222', address: 'Mandalay Hub', bankAccount: 'KBZPay: 096000222 (Ninja)' },
+  { id: 'DEL-103', name: 'Britium Express', phone: '097000333', address: 'Naypyitaw Hub', bankAccount: 'KBZPay: 097000333 (Britium)' },
+];
+
+let inventory = [
+  { id: 'ITM-001', vendorId: 'VND-101', name: 'Matte Lipstick (Red)', category: 'Beauty', price: 12000, cost: 0, quantity: 45, damagedQty: 2, stockInDate: '2026-10-01', sku: 'SKU-VND-A001', handlingFee: 500, storeChargePerDay: 50, freeDays: 7 },
+  { id: 'ITM-002', vendorId: 'VND-101', name: 'Hydrating Serum 50ml', category: 'Skincare', price: 28000, cost: 0, quantity: 18, damagedQty: 0, stockInDate: '2026-09-15', sku: 'SKU-VND-A002', handlingFee: 500, storeChargePerDay: 50, freeDays: 7 },
+  { id: 'ITM-003', vendorId: 'VND-102', name: 'Oversized Cotton Tee', category: 'Apparel', price: 18000, cost: 0, quantity: 30, damagedQty: 1, stockInDate: '2026-10-10', sku: 'SKU-VND-B001', handlingFee: 600, storeChargePerDay: 60, freeDays: 5 },
+];
+
+let orders = [
+  {
+    id: 'TN-ORD-8801',
+    vendorId: 'VND-101',
+    customerName: 'Daw Mya Mya',
+    customerPhone: '09790001234',
+    deliveryAddress: 'No. 45, Pyay Road, Mayangone, Yangon',
+    deliveryService: 'Royal Express',
+    trackingNo: 'REX-998234',
+    status: 'Delivered',
+    cancelled: false,
+    items: [{ itemId: 'ITM-001', name: 'Matte Lipstick (Red)', qty: 2, price: 12000, discount: 1000, status: 'Delivered' }],
+    itemTotal: 23000,
+    deliveryFee: 0,
+    totalCod: 23000,
+    tnHandlingFee: 500,
+    tnStoreFee: 0,
+    codCollected: true,
+    settlementStatus: 'Settled',
+    createdAt: '2026-10-18 10:30 AM',
+    updatedBy: 'Staff_Aung'
+  },
+  {
+    id: 'TN-ORD-8802',
+    vendorId: 'VND-102',
+    customerName: 'U Kyaw Swar',
+    customerPhone: '09960005678',
+    deliveryAddress: '78th St, Mandalay',
+    deliveryService: 'Ninja Van',
+    trackingNo: 'NV-334112',
+    status: 'In-Transit',
+    cancelled: false,
+    items: [{ itemId: 'ITM-003', name: 'Oversized Cotton Tee', qty: 1, price: 18000, discount: 0, status: 'Pending' }],
+    itemTotal: 18000,
+    deliveryFee: 0,
+    totalCod: 18000,
+    tnHandlingFee: 600,
+    tnStoreFee: 600,
+    codCollected: false,
+    settlementStatus: 'Pending',
+    createdAt: '2026-10-21 02:15 PM',
+    updatedBy: 'Staff_Su'
+  }
+];
+
+let returns = [
+  { id: 'RET-001', orderId: 'TN-ORD-8800', vendorId: 'VND-101', itemName: 'Hydrating Serum', qty: 1, type: 'Delivery Return', reason: 'Customer Refused', status: 'In Warehouse', date: '2026-10-19' },
+  { id: 'RET-002', itemId: 'ITM-001', vendorId: 'VND-101', itemName: 'Matte Lipstick (Red)', qty: 2, type: 'Vendor Return (Damage)', reason: 'Expired packaging', status: 'Returned to Vendor', date: '2026-10-20' }
+];
+
+let cashLedger = [];
+let notifications = [];
+
+// --- API Endpoints ---
+
+// 1. Users
+app.get('/api/users', (req, res) => res.json(usersList));
+app.post('/api/users', (req, res) => {
+  usersList.push(req.body);
+  res.status(201).json(req.body);
+});
+app.put('/api/users/:id', (req, res) => {
+  usersList = usersList.map(u => u.id === req.params.id ? { ...u, ...req.body } : u);
+  res.json({ success: true });
+});
+app.delete('/api/users/:id', (req, res) => {
+  usersList = usersList.filter(u => u.id !== req.params.id);
+  res.json({ success: true });
 });
 
-// USERS API
-app.get('/api/users', async (req, res) => {
-  const { data, error } = await supabase.from('users').select('*');
-  if (error) return res.status(400).json({ error: error.message });
-  const formattedUsers = (data || []).map(u => ({
-    id: u.id, username: u.username, password: u.password, name: u.name, role: u.role, vendorId: u.vendor_id || ''
-  }));
-  res.json(formattedUsers);
+// 2. Vendors
+app.get('/api/vendors', (req, res) => res.json(vendors));
+app.post('/api/vendors', (req, res) => {
+  vendors.push(req.body);
+  res.status(201).json(req.body);
+});
+app.put('/api/vendors/:id', (req, res) => {
+  vendors = vendors.map(v => v.id === req.params.id ? { ...v, ...req.body } : v);
+  res.json({ success: true });
+});
+app.delete('/api/vendors/:id', (req, res) => {
+  vendors = vendors.filter(v => v.id !== req.params.id);
+  res.json({ success: true });
 });
 
-app.post('/api/users', async (req, res) => {
-  const u = req.body;
-  const dbUser = { id: u.id, username: u.username, password: u.password, name: u.name, role: u.role, vendor_id: u.vendorId || '' };
-  const { data, error } = await supabase.from('users').insert([dbUser]);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'User created successfully', data });
+// 3. Deliveries
+app.get('/api/deliveries', (req, res) => res.json(deliveries));
+app.post('/api/deliveries', (req, res) => {
+  deliveries.push(req.body);
+  res.status(201).json(req.body);
+});
+app.put('/api/deliveries/:id', (req, res) => {
+  deliveries = deliveries.map(d => d.id === req.params.id ? { ...d, ...req.body } : d);
+  res.json({ success: true });
+});
+app.delete('/api/deliveries/:id', (req, res) => {
+  deliveries = deliveries.filter(d => d.id !== req.params.id);
+  res.json({ success: true });
 });
 
-app.put('/api/users/:id', async (req, res) => {
-  const userId = req.params.id;
-  const u = req.body;
-  const dbUser = { username: u.username, name: u.name, role: u.role, vendor_id: u.vendorId || '' };
-  if (u.password) dbUser.password = u.password;
-  const { data, error } = await supabase.from('users').update(dbUser).eq('id', userId);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'User updated successfully', data });
+// 4. Inventory / Items
+app.get('/api/inventory', (req, res) => res.json(inventory));
+app.post('/api/inventory', (req, res) => {
+  inventory.push(req.body);
+  res.status(201).json(req.body);
+});
+app.post('/api/items', (req, res) => {
+  inventory.unshift(req.body);
+  res.status(201).json(req.body);
+});
+app.put('/api/items/:id', (req, res) => {
+  inventory = inventory.map(i => i.id === req.params.id ? { ...i, ...req.body } : i);
+  res.json({ success: true });
 });
 
-app.delete('/api/users/:id', async (req, res) => {
-  const { data, error } = await supabase.from('users').delete().eq('id', req.params.id);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'User deleted successfully', data });
+// 5. Orders
+app.get('/api/orders', (req, res) => res.json(orders));
+app.post('/api/orders', (req, res) => {
+  orders.unshift(req.body);
+  res.status(201).json(req.body);
+});
+app.put('/api/orders/:id', (req, res) => {
+  orders = orders.map(o => o.id === req.params.id ? { ...o, ...req.body } : o);
+  res.json({ success: true });
+});
+app.delete('/api/orders/:id', (req, res) => {
+  orders = orders.filter(o => o.id !== req.params.id);
+  res.json({ success: true });
 });
 
-// VENDORS API
-app.get('/api/vendors', async (req, res) => {
-  const { data, error } = await supabase.from('vendors').select('*');
-  if (error) return res.status(400).json({ error: error.message });
-  const formattedVendors = (data || []).map(v => ({
-    id: v.id, name: v.name, phone: v.phone, address: v.address, bankAccount: v.bank_account,
-    freeStorageDays: Number(v.free_storage_days) || 7, dailyStoreFee: Number(v.daily_store_fee) || 200
-  }));
-  res.json(formattedVendors);
+// 6. Returns
+app.get('/api/returns', (req, res) => res.json(returns));
+app.post('/api/returns', (req, res) => {
+  returns.unshift(req.body);
+  res.status(201).json(req.body);
 });
 
-app.post('/api/vendors', async (req, res) => {
-  const v = req.body;
-  const dbVendor = { id: v.id, name: v.name, phone: v.phone, address: v.address, bank_account: v.bankAccount, free_storage_days: v.freeStorageDays, daily_store_fee: v.dailyStoreFee };
-  const { data, error } = await supabase.from('vendors').insert([dbVendor]);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'Vendor added', data });
+// 7. Cash Ledger (Cash Management)
+app.get('/api/cash-ledger', (req, res) => res.json(cashLedger));
+app.post('/api/cash-ledger', (req, res) => {
+  cashLedger.unshift(req.body);
+  res.status(201).json(req.body);
 });
 
-// DELIVERIES API
-app.get('/api/deliveries', async (req, res) => {
-  const { data, error } = await supabase.from('deliveries').select('*');
-  if (error) return res.status(400).json({ error: error.message });
-  const formattedDeliveries = (data || []).map(d => ({
-    id: d.id, name: d.name, phone: d.phone, address: d.address, bankAccount: d.bank_account
-  }));
-  res.json(formattedDeliveries);
+// 8. Notifications
+app.get('/api/notifications', (req, res) => res.json(notifications));
+app.post('/api/notifications', (req, res) => {
+  notifications.unshift(req.body);
+  res.status(201).json(req.body);
 });
 
-app.post('/api/deliveries', async (req, res) => {
-  const d = req.body;
-  const dbDelivery = { id: d.id, name: d.name, phone: d.phone, address: d.address, bank_account: d.bankAccount };
-  const { data, error } = await supabase.from('deliveries').insert([dbDelivery]);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'Delivery added', data });
-});
-
-app.put('/api/deliveries/:id', async (req, res) => {
-  const d = req.body;
-  const dbDelivery = { name: d.name, phone: d.phone, address: d.address, bank_account: d.bankAccount };
-  const { data, error } = await supabase.from('deliveries').update(dbDelivery).eq('id', req.params.id);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'Delivery updated', data });
-});
-
-app.delete('/api/deliveries/:id', async (req, res) => {
-  const { data, error } = await supabase.from('deliveries').delete().eq('id', req.params.id);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'Delivery deleted', data });
-});
-
-// INVENTORY ITEMS API
-app.get('/api/inventory', async (req, res) => {
-  const { data, error } = await supabase.from('items').select('*');
-  if (error) return res.status(400).json({ error: error.message });
-  const formattedItems = (data || []).map(item => ({
-    id: item.id, vendorId: item.vendor_id, name: item.name, category: item.category,
-    price: Number(item.price) || 0, cost: Number(item.cost) || 0, quantity: Number(item.quantity) || 0,
-    damagedQty: Number(item.damaged_qty) || 0, stockInDate: item.stock_in_date, sku: item.sku,
-    handlingFee: Number(item.handling_fee) || 0, storeChargePerDay: Number(item.store_charge_per_day) || 0, freeDays: Number(item.free_days) || 0
-  }));
-  res.json(formattedItems);
-});
-
-app.post('/api/items', async (req, res) => {
-  const item = req.body;
-  const dbItem = { id: item.id, vendor_id: item.vendorId, name: item.name, category: item.category, price: item.price, cost: 0, quantity: item.quantity, damaged_qty: item.damagedQty || 0, stock_in_date: item.stockInDate, sku: item.sku, handling_fee: item.handlingFee, store_charge_per_day: item.storeChargePerDay, free_days: item.freeDays };
-  const { data, error } = await supabase.from('items').insert([dbItem]);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'Item added', data });
-});
-
-app.put('/api/items/:id', async (req, res) => {
-  const item = req.body;
-  const dbItem = {};
-  if (item.quantity !== undefined) dbItem.quantity = item.quantity;
-  if (item.price !== undefined) dbItem.price = item.price;
-  if (item.name !== undefined) dbItem.name = item.name;
-  const { data, error } = await supabase.from('items').update(dbItem).eq('id', req.params.id);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'Item updated', data });
-});
-
-// ORDERS API
-app.get('/api/orders', async (req, res) => {
-  const { data, error } = await supabase.from('orders').select('*');
-  if (error) return res.status(400).json({ error: error.message });
-  const formattedOrders = (data || []).map(order => ({
-    id: order.id, vendorId: order.vendor_id, customerName: order.customer_name, customerPhone: order.customer_phone,
-    deliveryAddress: order.delivery_address, deliveryService: order.delivery_service, trackingNo: order.tracking_no,
-    status: order.status, cancelled: order.cancelled, items: order.items || [], itemTotal: Number(order.item_total) || 0,
-    deliveryFee: Number(order.delivery_fee) || 0, totalCod: Number(order.total_cod) || 0, tnHandlingFee: Number(order.tn_handling_fee) || 0,
-    tnStoreFee: Number(order.tn_store_fee) || 0, codCollected: order.cod_collected, settlementStatus: order.settlement_status,
-    createdAt: order.created_at, updatedBy: order.updated_by
-  }));
-  res.json(formattedOrders);
-});
-
-app.post('/api/orders', async (req, res) => {
-  const order = req.body;
-  const dbOrder = {
-    id: order.id, vendor_id: order.vendorId, customer_name: order.customerName, customer_phone: order.customerPhone,
-    delivery_address: order.deliveryAddress, delivery_service: order.deliveryService, tracking_no: order.trackingNo,
-    status: order.status, cancelled: order.cancelled, items: order.items, item_total: order.itemTotal, delivery_fee: order.deliveryFee,
-    total_cod: order.totalCod, tn_handling_fee: order.tnHandlingFee, tn_store_fee: order.tnStoreFee, cod_collected: order.codCollected,
-    settlement_status: order.settlementStatus, created_at: order.createdAt, updated_by: order.updatedBy
-  };
-  const { data, error } = await supabase.from('orders').insert([dbOrder]);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'Order created', data });
-});
-
-app.put('/api/orders/:id', async (req, res) => {
-  const order = req.body;
-  const dbOrder = { status: order.status, tracking_no: order.trackingNo, cancelled: order.cancelled, cod_collected: order.codCollected, updated_by: order.updatedBy };
-  if (order.items !== undefined) dbOrder.items = order.items;
-  if (order.itemTotal !== undefined) dbOrder.item_total = order.itemTotal;
-  if (order.totalCod !== undefined) dbOrder.total_cod = order.totalCod;
-  const { data, error } = await supabase.from('orders').update(dbOrder).eq('id', req.params.id);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'Order updated', data });
-});
-
-app.delete('/api/orders/:id', async (req, res) => {
-  const { data, error } = await supabase.from('orders').delete().eq('id', req.params.id);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'Order deleted', data });
-});
-
-// RETURNS API
-app.get('/api/returns', async (req, res) => {
-  const { data, error } = await supabase.from('returns').select('*');
-  if (error) return res.status(400).json({ error: error.message });
-  const formattedReturns = (data || []).map(ret => ({
-    id: ret.id, orderId: ret.order_id, itemId: ret.item_id, vendorId: ret.vendor_id, itemName: ret.item_name,
-    qty: Number(ret.qty) || 0, type: ret.type, reason: ret.reason, status: ret.status, date: ret.date
-  }));
-  res.json(formattedReturns);
-});
-
-app.post('/api/returns', async (req, res) => {
-  const ret = req.body;
-  const dbRet = { id: ret.id, order_id: ret.orderId || '', item_id: ret.itemId || '', vendor_id: ret.vendorId, item_name: ret.itemName, qty: ret.qty, type: ret.type, reason: ret.reason, status: ret.status, date: ret.date };
-  const { data, error } = await supabase.from('returns').insert([dbRet]);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'Return recorded', data });
-});
-
-// CASH TRANSACTIONS API (NEW FEATURE 3)
-app.get('/api/cash-transactions', async (req, res) => {
-  const { data, error } = await supabase.from('cash_transactions').select('*').order('created_at', { ascending: false });
-  if (error) return res.status(400).json({ error: error.message });
-  const formatted = (data || []).map(t => ({
-    id: t.id, type: t.type, entityId: t.entity_id, entityName: t.entity_name,
-    amount: Number(t.amount) || 0, paymentMethod: t.payment_method, referenceNo: t.reference_no,
-    note: t.note, createdAt: t.created_at, createdBy: t.created_by
-  }));
-  res.json(formatted);
-});
-
-app.post('/api/cash-transactions', async (req, res) => {
-  const t = req.body;
-  const dbTx = {
-    id: t.id, type: t.type, entity_id: t.entityId, entity_name: t.entityName,
-    amount: t.amount, payment_method: t.paymentMethod, reference_no: t.referenceNo,
-    note: t.note, created_at: t.createdAt, created_by: t.createdBy
-  };
-  const { data, error } = await supabase.from('cash_transactions').insert([dbTx]);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'Cash transaction recorded', data });
-});
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`T&N Backend Server running on port ${PORT}`));
