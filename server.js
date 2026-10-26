@@ -21,7 +21,7 @@ app.get('/api/users', async (req, res) => {
   res.json(data);
 });
 
-// Vendors API (New addition to fix persistence issue)
+// Vendors API
 app.get('/api/vendors', async (req, res) => {
   const { data, error } = await supabase.from('vendors').select('*');
   if (error) return res.status(400).json({ error: error.message });
@@ -210,6 +210,11 @@ app.put('/api/orders/:id', async (req, res) => {
     cod_collected: order.codCollected,
     updated_by: order.updatedBy
   };
+
+  // Partial Return သို့မဟုတ် အခြား အပြောင်းအอ်များအတွက် ထည့်သွင်းခြင်း
+  if (order.items !== undefined) dbOrder.items = order.items;
+  if (order.itemTotal !== undefined) dbOrder.item_total = order.itemTotal;
+  if (order.totalCod !== undefined) dbOrder.total_cod = order.totalCod;
 
   const { data, error } = await supabase
     .from('orders')
