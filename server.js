@@ -15,10 +15,60 @@ app.get('/', (req, res) => {
   res.send('T&N Fulfillment Backend API is running successfully!');
 });
 
+// Users API
 app.get('/api/users', async (req, res) => {
   const { data, error } = await supabase.from('users').select('*');
   if (error) return res.status(400).json({ error: error.message });
-  res.json(data);
+
+  const formattedUsers = (data || []).map(u => ({
+    id: u.id,
+    username: u.username,
+    password: u.password,
+    name: u.name,
+    role: u.role,
+    vendorId: u.vendor_id || ''
+  }));
+
+  res.json(formattedUsers);
+});
+
+app.post('/api/users', async (req, res) => {
+  const u = req.body;
+  const dbUser = {
+    id: u.id,
+    username: u.username,
+    password: u.password,
+    name: u.name,
+    role: u.role,
+    vendor_id: u.vendorId || ''
+  };
+
+  const { data, error } = await supabase.from('users').insert([dbUser]);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: 'User created successfully', data });
+});
+
+app.put('/api/users/:id', async (req, res) => {
+  const userId = req.params.id;
+  const u = req.body;
+  const dbUser = {
+    username: u.username,
+    name: u.name,
+    role: u.role,
+    vendor_id: u.vendorId || ''
+  };
+  if (u.password) dbUser.password = u.password;
+
+  const { data, error } = await supabase.from('users').update(dbUser).eq('id', userId);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: 'User updated successfully', data });
+});
+
+app.delete('/api/users/:id', async (req, res) => {
+  const userId = req.params.id;
+  const { data, error } = await supabase.from('users').delete().eq('id', userId);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: 'User deleted successfully', data });
 });
 
 // Vendors API
@@ -56,7 +106,7 @@ app.post('/api/vendors', async (req, res) => {
   res.json({ message: 'Vendor added successfully', data });
 });
 
-// Deliveries API (Newly Added)
+// Deliveries API
 app.get('/api/deliveries', async (req, res) => {
   const { data, error } = await supabase.from('deliveries').select('*');
   if (error) return res.status(400).json({ error: error.message });
@@ -109,6 +159,7 @@ app.delete('/api/deliveries/:id', async (req, res) => {
   res.json({ message: 'Delivery deleted successfully', data });
 });
 
+// Inventory & Items API
 app.get('/api/inventory', async (req, res) => {
   const { data, error } = await supabase.from('items').select('*');
   if (error) return res.status(400).json({ error: error.message });
@@ -186,15 +237,12 @@ app.put('/api/items/:id', async (req, res) => {
   if (item.price !== undefined) dbItem.price = item.price;
   if (item.name !== undefined) dbItem.name = item.name;
 
-  const { data, error } = await supabase
-    .from('items')
-    .update(dbItem)
-    .eq('id', itemId);
-
+  const { data, error } = await supabase.from('items').update(dbItem).eq('id', itemId);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ message: 'Item updated successfully', data });
 });
 
+// Orders API
 app.get('/api/orders', async (req, res) => {
   const { data, error } = await supabase.from('orders').select('*');
   if (error) return res.status(400).json({ error: error.message });
@@ -268,16 +316,11 @@ app.put('/api/orders/:id', async (req, res) => {
   if (order.itemTotal !== undefined) dbOrder.item_total = order.itemTotal;
   if (order.totalCod !== undefined) dbOrder.total_cod = order.totalCod;
 
-  const { data, error } = await supabase
-    .from('orders')
-    .update(dbOrder)
-    .eq('id', orderId);
-
+  const { data, error } = await supabase.from('orders').update(dbOrder).eq('id', orderId);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ message: 'Order updated successfully', data });
 });
 
-// Delete Order API (Newly Added for Cancelled Vouchers)
 app.delete('/api/orders/:id', async (req, res) => {
   const orderId = req.params.id;
   const { data, error } = await supabase.from('orders').delete().eq('id', orderId);
@@ -285,6 +328,7 @@ app.delete('/api/orders/:id', async (req, res) => {
   res.json({ message: 'Order deleted successfully', data });
 });
 
+// Returns API
 app.get('/api/returns', async (req, res) => {
   const { data, error } = await supabase.from('returns').select('*');
   if (error) return res.status(400).json({ error: error.message });
