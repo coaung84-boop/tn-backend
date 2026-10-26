@@ -159,7 +159,7 @@ app.delete('/api/deliveries/:id', async (req, res) => {
   res.json({ message: 'Delivery deleted successfully', data });
 });
 
-// Inventory & Items API
+// Inventory / Items API
 app.get('/api/inventory', async (req, res) => {
   const { data, error } = await supabase.from('items').select('*');
   if (error) return res.status(400).json({ error: error.message });
@@ -237,7 +237,11 @@ app.put('/api/items/:id', async (req, res) => {
   if (item.price !== undefined) dbItem.price = item.price;
   if (item.name !== undefined) dbItem.name = item.name;
 
-  const { data, error } = await supabase.from('items').update(dbItem).eq('id', itemId);
+  const { data, error } = await supabase
+    .from('items')
+    .update(dbItem)
+    .eq('id', itemId);
+
   if (error) return res.status(400).json({ error: error.message });
   res.json({ message: 'Item updated successfully', data });
 });
@@ -316,7 +320,11 @@ app.put('/api/orders/:id', async (req, res) => {
   if (order.itemTotal !== undefined) dbOrder.item_total = order.itemTotal;
   if (order.totalCod !== undefined) dbOrder.total_cod = order.totalCod;
 
-  const { data, error } = await supabase.from('orders').update(dbOrder).eq('id', orderId);
+  const { data, error } = await supabase
+    .from('orders')
+    .update(dbOrder)
+    .eq('id', orderId);
+
   if (error) return res.status(400).json({ error: error.message });
   res.json({ message: 'Order updated successfully', data });
 });
